@@ -61,6 +61,7 @@ static int		hflg = 0;
 static int		Aflg = 0;
 static int		Hflg = 0;
 static int		Lflg = 0;
+static int		maxdepth = INT_MAX;
 static int		cmdarg = 0;	/* Command line argument */
 static char		*dot = ".";
 static int		level = 0;	/* Level of recursion */
@@ -101,6 +102,8 @@ main(int argc, char **argv)
 	blkcnt_t	blocks = 0;
 	int		c;
 	extern int	optind;
+	extern char	*optarg;
+	const char	*errstr;
 	char		*np;
 	pid_t		pid, wpid;
 	int		status, retcode = 0;
@@ -114,7 +117,6 @@ main(int argc, char **argv)
 #ifdef XPG4
 	rflg++;		/* "-r" is not an option but ON always */
 #endif
-
 	while ((c = getopt(argc, argv, "aAdhHkLmorsx")) != EOF)
 		switch (c) {
 
@@ -164,6 +166,16 @@ main(int argc, char **argv)
 			Aflg++;
 			continue;
 
+		case 'D':
+			maxdepth = strtonum(optarg, 0, INT_MAX, &errstr);
+			if (errstr != NULL) {
+				(void) fprintf(stderr, gettext(
+				    "du: Depth %s\n"),
+				    errstr);
+				exit(2);
+			}
+			continue;
+
 		case 'H':
 			Hflg++;
 			/* -H and -L are mutually exclusive */
@@ -179,8 +191,8 @@ main(int argc, char **argv)
 			continue;
 		case '?':
 			(void) fprintf(stderr, gettext(
-			    "usage: du [-Adorx] [-a|-s] [-h|-k|-m] [-H|-L] "
-			    "[file...]\n"));
+			    "usage: du [-Adorx] [-a|-s|-D depth] [-b|-h|-k|-m] "
+			    "[-H|-L] [file...]\n"));
 			exit(2);
 		}
 	if (optind == argc) {
@@ -192,6 +204,10 @@ main(int argc, char **argv)
 	/* "-o" and "-s" don't make any sense together. */
 	if (oflg && sflg)
 		oflg = 0;
+
+	/* "-s" should cancel out "-D" */
+	if (sflg)
+		maxdepth = 0;
 
 	if ((base = (char *)calloc(base_len, sizeof (char))) == NULL) {
 		perror("du");
@@ -262,7 +278,7 @@ main(int argc, char **argv)
 				np = base;
 			blocks = descend(*np ? np : ".", 0, &retcode,
 			    (dev_t)0);
-			if (sflg)
+			if (maxdepth == 0)
 				printsize(blocks, base);
 			if (optind < argc - 1)
 				exitdu(retcode);
@@ -401,19 +417,19 @@ descend(char *curname, int curfd, int *retcode, dev_t device)
 		}
 		else
 		{
-			tmpflg = sflg;
-			sflg = 1;
+			tmpflg = maxdepth;
+			maxdepth = 0;
 			blocks += descend(NULL, fd, retcode, device);
-			sflg = tmpflg;
+			maxdepth = tmpflg;
 		}
 	}
 	if ((stb.st_mode & S_IFMT) != S_IFDIR) {
 		/*
-		 * Don't print twice: if sflg, file will get printed in main().
-		 * Otherwise, level == 0 means this file is listed on the
-		 * command line, so print here; aflg means print all files.
+		 * Don't print twice: if no depth, file will get printed in
+		 * main(). therwise, level == 0 means this file is listed on
+		 * the command line, so print here; aflg means print all files.
 		 */
-		if (sflg == 0 && (aflg || level == 0))
+		if (maxdepth > 0 && (level == 0 || (aflg && level <= maxdepth)))
 			printsize(blocks, base);
 		return (blocks);
 	}
@@ -506,7 +522,7 @@ descend(char *curname, int curfd, int *retcode, dev_t device)
 	(void) closedir(dirp);
 	level--;
 	dirp = NULL;
-	if (sflg == 0)
+	if (maxdepth > 0 && level <= maxdepth)
 		printsize(blocks, base);
 	if (curname == NULL || (Lflg && S_ISLNK(stb1.st_mode)))
 		ret = chdir(dirbuf);

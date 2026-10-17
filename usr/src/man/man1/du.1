@@ -44,7 +44,7 @@
 .\" Portions Copyright (c) 2007, Sun Microsystems, Inc. All Rights Reserved.
 .\" Copyright 2017 OmniTI Computer Consulting, Inc. All rights reserved.
 .\"
-.TH DU 1 "March 14, 2017"
+.TH DU 1 "March 18, 2026"
 .SH NAME
 du \- summarize disk usage
 .SH SYNOPSIS
@@ -56,7 +56,7 @@ du \- summarize disk usage
 
 .LP
 .nf
-\fB/usr/xpg4/bin/du\fR [\fB-Adorx\fR] [\fB-a\fR | \fB-s\fR] [\fB-h\fR | \fB-k\fR | \fB-m\fR] [\fB-H\fR | \fB-L\fR]
+\fB/usr/xpg4/bin/du\fR [\fB-Adorx\fR] [\fB-a\fR | \fB-s\fR | \fB-D\fR] [\fB-h\fR | \fB-k\fR | \fB-m\fR] [\fB-H\fR | \fB-L\fR]
      [\fIfile\fR ...]
 .fi
 
@@ -115,6 +115,16 @@ Do not cross filesystem boundaries. For example, the command, \fBdu -d /\fR
 reports usage only on the root partition.
 .RE
 
+.sp
+.ne 2
+.na
+\fB\fB-D\fR\fR
+.ad
+.RS 6n
+Display an entry for all files and directories \fBdepth\fR directories deep.
+.RE
+
+.RE
 .sp
 .ne 2
 .na
